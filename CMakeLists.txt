@@ -7,4 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(LogSentinel
     src/main.cpp
+    src/Event.cpp
+)
+
+target_include_directories(LogSentinel PRIVATE
+    include
 )
