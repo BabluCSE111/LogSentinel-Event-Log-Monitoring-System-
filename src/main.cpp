@@ -2,6 +2,7 @@
 #include "LogReader.h"
 #include "RuleEngine.h"
 #include "Alert.h"
+#include "AlertManager.h"
 
 using namespace std;
 
@@ -14,6 +15,8 @@ int main() {
     RuleEngine engine;
 
     Alert alert;
+
+    AlertManager alertManager;
 
     for (Event event : events) {
 
@@ -29,13 +32,21 @@ int main() {
             cout << "Status: SUSPICIOUS" << endl;
 
             alert.showAlert(event);
+
+            alertManager.addAlert(event);
         }
         else {
+
             cout << "Status: NORMAL" << endl;
         }
 
         cout << "------------------------" << endl;
     }
+
+    cout << endl;
+    cout << "Total Alerts: "
+         << alertManager.getAlertCount()
+         << endl;
 
     return 0;
 }
