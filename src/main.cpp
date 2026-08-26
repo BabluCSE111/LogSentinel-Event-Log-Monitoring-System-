@@ -1,6 +1,7 @@
 #include <iostream>
 #include "LogReader.h"
 #include "RuleEngine.h"
+#include "Alert.h"
 
 using namespace std;
 
@@ -12,6 +13,8 @@ int main() {
 
     RuleEngine engine;
 
+    Alert alert;
+
     for (Event event : events) {
 
         cout << "Event ID: " << event.getEventId() << endl;
@@ -22,7 +25,10 @@ int main() {
         cout << "Severity: " << severityToString(event.getSeverity()) << endl;
 
         if (engine.isSuspicious(event)) {
+
             cout << "Status: SUSPICIOUS" << endl;
+
+            alert.showAlert(event);
         }
         else {
             cout << "Status: NORMAL" << endl;
