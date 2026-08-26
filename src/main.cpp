@@ -1,25 +1,25 @@
 #include <iostream>
-#include "Event.h"
+#include "LogReader.h"
 
 using namespace std;
 
 int main() {
 
-    Event event(
-        4625,
-        "2026-08-25 19:00:00",
-        "Windows Security",
-        "Administrator",
-        "Failed login attempt",
-        HIGH
-    );
+    LogReader reader;
 
-    cout << "Event ID: " << event.getEventId() << endl;
-    cout << "Timestamp: " << event.getTimestamp() << endl;
-    cout << "Source: " << event.getSource() << endl;
-    cout << "Username: " << event.getUsername() << endl;
-    cout << "Message: " << event.getMessage() << endl;
-    cout << "Severity: " << severityToString(event.getSeverity()) << endl;
+    vector<Event> events = reader.readFile("logs/test.log");
+
+    for (Event event : events) {
+
+        cout << "Event ID: " << event.getEventId() << endl;
+        cout << "Timestamp: " << event.getTimestamp() << endl;
+        cout << "Source: " << event.getSource() << endl;
+        cout << "Username: " << event.getUsername() << endl;
+        cout << "Message: " << event.getMessage() << endl;
+        cout << "Severity: " << severityToString(event.getSeverity()) << endl;
+
+        cout << "------------------------" << endl;
+    }
 
     return 0;
 }
