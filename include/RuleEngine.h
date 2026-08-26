@@ -10,7 +10,9 @@ public:
 
         if (event.getSeverity() == HIGH ||
             event.getSeverity() == CRITICAL ||
-            event.getEventId() == 4625) {
+            event.getEventId() == 4625 ||
+            event.getEventId() == 4720 ||
+            event.getEventId() == 4672) {
 
             return true;
         }
