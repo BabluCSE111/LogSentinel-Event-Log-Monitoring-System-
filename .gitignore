@@ -1,1 +1,8 @@
 build/
+
+*.exe
+*.o
+
+logs/*.log
+
+*.backup

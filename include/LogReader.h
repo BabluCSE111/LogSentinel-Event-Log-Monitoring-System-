@@ -1,67 +1,75 @@
 #ifndef LOGREADER_H
 #define LOGREADER_H
 
-#include <string>
 #include <vector>
+#include <string>
 #include <fstream>
 #include <sstream>
 #include <iostream>
 
 #include "Event.h"
 
-using namespace std;
-
 class LogReader {
 public:
 
-    vector<Event> readFile(string filePath) {
+    std::vector<Event> readFile(const std::string& filePath)
+    {
+        std::vector<Event> events;
 
-        vector<Event> events;
+        std::ifstream file(filePath);
 
-        ifstream file(filePath);
+        if (!file.is_open())
+        {
+            std::cout
+                << "Error: Could not open log file: "
+                << filePath
+                << std::endl;
 
-        if (!file.is_open()) {
-            cout << "Error: Could not open log file: " << filePath << endl;
             return events;
         }
 
-        string line;
+        std::string line;
 
-        while (getline(file, line)) {
+        while (std::getline(file, line))
+        {
+            std::stringstream ss(line);
 
-            stringstream ss(line);
+            std::string timestamp;
+            std::string eventId;
+            std::string source;
+            std::string username;
+            std::string message;
+            std::string severity;
 
-            string timestamp;
-            string eventId;
-            string source;
-            string username;
-            string message;
-            string severity;
+            std::getline(ss, timestamp, '|');
+            std::getline(ss, eventId, '|');
+            std::getline(ss, source, '|');
+            std::getline(ss, username, '|');
+            std::getline(ss, message, '|');
+            std::getline(ss, severity, '|');
 
-            getline(ss, timestamp, '|');
-            getline(ss, eventId, '|');
-            getline(ss, source, '|');
-            getline(ss, username, '|');
-            getline(ss, message, '|');
-            getline(ss, severity, '|');
-
-            int id = stoi(eventId);
+            int id = std::stoi(eventId);
 
             Severity eventSeverity;
 
-            if (severity == "INFO") {
+            if (severity == "INFO")
+            {
                 eventSeverity = INFO;
             }
-            else if (severity == "LOW") {
+            else if (severity == "LOW")
+            {
                 eventSeverity = LOW;
             }
-            else if (severity == "MEDIUM") {
+            else if (severity == "MEDIUM")
+            {
                 eventSeverity = MEDIUM;
             }
-            else if (severity == "HIGH") {
+            else if (severity == "HIGH")
+            {
                 eventSeverity = HIGH;
             }
-            else {
+            else
+            {
                 eventSeverity = CRITICAL;
             }
 

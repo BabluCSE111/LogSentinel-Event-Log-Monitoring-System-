@@ -2,46 +2,55 @@
 
 Event::Event(
     int eventId,
-    string timestamp,
-    string source,
-    string username,
-    string message,
+    std::string timestamp,
+    std::string source,
+    std::string username,
+    std::string message,
     Severity severity
-) {
-    this->eventId = eventId;
-    this->timestamp = timestamp;
-    this->source = source;
-    this->username = username;
-    this->message = message;
-    this->severity = severity;
+)
+    : eventId(eventId),
+      timestamp(timestamp),
+      source(source),
+      username(username),
+      message(message),
+      severity(severity)
+{
 }
 
-int Event::getEventId() const {
+int Event::getEventId() const
+{
     return eventId;
 }
 
-string Event::getTimestamp() const {
+std::string Event::getTimestamp() const
+{
     return timestamp;
 }
 
-string Event::getSource() const {
+std::string Event::getSource() const
+{
     return source;
 }
 
-string Event::getUsername() const {
+std::string Event::getUsername() const
+{
     return username;
 }
 
-string Event::getMessage() const {
+std::string Event::getMessage() const
+{
     return message;
 }
 
-Severity Event::getSeverity() const {
+Severity Event::getSeverity() const
+{
     return severity;
 }
 
-string severityToString(Severity severity) {
-    switch (severity) {
+std::string severityToString(Severity severity)
+{
+    switch (severity)
+    {
         case INFO:
             return "INFO";
 
@@ -56,7 +65,8 @@ string severityToString(Severity severity) {
 
         case CRITICAL:
             return "CRITICAL";
-    }
 
-    return "UNKNOWN";
+        default:
+            return "UNKNOWN";
+    }
 }

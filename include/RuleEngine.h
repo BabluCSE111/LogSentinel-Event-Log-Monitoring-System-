@@ -2,22 +2,20 @@
 #define RULEENGINE_H
 
 #include "Event.h"
+#include "Config.h"
 
-class RuleEngine {
+class RuleEngine
+{
+private:
+    Config config;
+
 public:
+    bool isSuspicious(const Event& event)
+    {
+        Rule rule =
+            config.getRule(event.getEventId());
 
-    bool isSuspicious(Event event) {
-
-        if (event.getSeverity() == HIGH ||
-            event.getSeverity() == CRITICAL ||
-            event.getEventId() == 4625 ||
-            event.getEventId() == 4720 ||
-            event.getEventId() == 4672) {
-
-            return true;
-        }
-
-        return false;
+        return rule.suspicious;
     }
 };
 

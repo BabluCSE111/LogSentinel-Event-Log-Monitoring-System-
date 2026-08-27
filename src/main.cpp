@@ -3,6 +3,7 @@
 #include "RuleEngine.h"
 #include "Alert.h"
 #include "AlertManager.h"
+#include "EventMonitor.h"
 
 using namespace std;
 
@@ -17,6 +18,20 @@ int main() {
     Alert alert;
 
     AlertManager alertManager;
+
+    EventMonitor monitor([&](Event event) {
+
+        cout << "Real event received: " << event.getEventId() << endl;
+
+        if (engine.isSuspicious(event)) {
+            cout << "LIVE EVENT: SUSPICIOUS" << endl;
+            alert.showAlert(event);
+            alertManager.addAlert(event);
+        }
+        else {
+            cout << "LIVE EVENT: NORMAL" << endl;
+        }
+    });
 
     for (Event event : events) {
 
@@ -47,6 +62,8 @@ int main() {
     cout << "Total Alerts: "
          << alertManager.getAlertCount()
          << endl;
+
+    monitor.start();
 
     return 0;
 }
