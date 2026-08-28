@@ -14,7 +14,7 @@ class AlertManager
 private:
     std::vector<Event> alerts;
 
-    bool isDuplicate(const Event& event) const
+    bool isDuplicate(const Event& event)
     {
         for (const Event& alert : alerts)
         {
@@ -30,31 +30,6 @@ private:
         return false;
     }
 
-    Severity stringToSeverity(const std::string& value) const
-    {
-        if (value == "LOW")
-        {
-            return LOW;
-        }
-
-        if (value == "MEDIUM")
-        {
-            return MEDIUM;
-        }
-
-        if (value == "HIGH")
-        {
-            return HIGH;
-        }
-
-        if (value == "CRITICAL")
-        {
-            return CRITICAL;
-        }
-
-        return INFO;
-    }
-
 public:
 
     void loadAlerts()
@@ -66,62 +41,94 @@ public:
             return;
         }
 
-        std::string line;
+        alerts.clear();
 
+        std::string line;
         int eventId = 0;
         std::string timestamp;
         std::string username;
         std::string message;
-        std::string severityText;
+        Severity severity = INFO;
 
         while (std::getline(file, line))
         {
             if (line.rfind("Event ID: ", 0) == 0)
             {
-                eventId =
-                    std::stoi(line.substr(10));
+                try
+                {
+                    eventId =
+                        std::stoi(line.substr(10));
+                }
+                catch (...)
+                {
+                    eventId = 0;
+                }
             }
             else if (line.rfind("Timestamp: ", 0) == 0)
             {
-                timestamp =
-                    line.substr(11);
+                timestamp = line.substr(11);
             }
             else if (line.rfind("Username: ", 0) == 0)
             {
-                username =
-                    line.substr(10);
+                username = line.substr(10);
             }
             else if (line.rfind("Reason: ", 0) == 0)
             {
-                message =
-                    line.substr(8);
+                message = line.substr(8);
             }
             else if (line.rfind("Severity: ", 0) == 0)
             {
-                severityText =
+                std::string severityText =
                     line.substr(10);
+
+                if (severityText == "INFO")
+                {
+                    severity = INFO;
+                }
+                else if (severityText == "LOW")
+                {
+                    severity = LOW;
+                }
+                else if (severityText == "MEDIUM")
+                {
+                    severity = MEDIUM;
+                }
+                else if (severityText == "HIGH")
+                {
+                    severity = HIGH;
+                }
+                else if (severityText == "CRITICAL")
+                {
+                    severity = CRITICAL;
+                }
             }
             else if (line == "--------------------------------")
             {
-                Event event(
-                    eventId,
-                    timestamp,
-                    "Windows Security",
-                    username,
-                    message,
-                    stringToSeverity(severityText)
-                );
-
-                if (!isDuplicate(event))
+                if (eventId > 0 &&
+                    !timestamp.empty() &&
+                    !username.empty() &&
+                    !message.empty())
                 {
-                    alerts.push_back(event);
+                    Event event(
+                        eventId,
+                        timestamp,
+                        "Windows Security",
+                        username,
+                        message,
+                        severity
+                    );
+
+                    if (!isDuplicate(event))
+                    {
+                        alerts.push_back(event);
+                    }
                 }
 
                 eventId = 0;
                 timestamp.clear();
                 username.clear();
                 message.clear();
-                severityText.clear();
+                severity = INFO;
             }
         }
     }
@@ -185,6 +192,11 @@ public:
         }
 
         return count;
+    }
+
+    const std::vector<Event>& getAlerts() const
+    {
+        return alerts;
     }
 
     void showStatistics() const

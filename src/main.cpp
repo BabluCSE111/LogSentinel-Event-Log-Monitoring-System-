@@ -3,10 +3,11 @@
 
 #include "LogReader.h"
 #include "RuleEngine.h"
-#include "Alert.h"
 #include "AlertManager.h"
 #include "EventMonitor.h"
 #include "Config.h"
+#include "EventProcessor.h"
+#include "EventCorrelator.h"
 
 using namespace std;
 
@@ -26,86 +27,39 @@ int main()
 
     alertManager.loadAlerts();
 
+    RuleEngine engine(config);
+
+    EventCorrelator correlator;
+
+    EventProcessor processor(
+        engine,
+        alertManager,
+        correlator
+    );
+
     LogReader reader;
 
     vector<Event> events =
         reader.readFile("logs/test.log");
 
-    RuleEngine engine(config);
+    for (const Event& event : events)
+    {
+        processor.process(event);
+    }
 
-    Alert alert;
+    alertManager.showStatistics();
 
     EventMonitor monitor(
         [&](Event event)
         {
-            cout << "Real event received: "
+            cout << "\nReal event received: "
                  << event.getEventId()
                  << endl;
 
-            if (engine.isSuspicious(event))
-            {
-                cout << "LIVE EVENT: SUSPICIOUS"
-                     << endl;
-
-                alert.showAlert(event);
-
-                alertManager.addAlert(event);
-            }
-            else
-            {
-                cout << "LIVE EVENT: NORMAL"
-                     << endl;
-            }
+            processor.process(event);
         },
         config
     );
-
-    for (const Event& event : events)
-    {
-        cout << "Event ID: "
-             << event.getEventId()
-             << endl;
-
-        cout << "Timestamp: "
-             << event.getTimestamp()
-             << endl;
-
-        cout << "Source: "
-             << event.getSource()
-             << endl;
-
-        cout << "Username: "
-             << event.getUsername()
-             << endl;
-
-        cout << "Message: "
-             << event.getMessage()
-             << endl;
-
-        cout << "Severity: "
-             << severityToString(event.getSeverity())
-             << endl;
-
-        if (engine.isSuspicious(event))
-        {
-            cout << "Status: SUSPICIOUS"
-                 << endl;
-
-            alert.showAlert(event);
-
-            alertManager.addAlert(event);
-        }
-        else
-        {
-            cout << "Status: NORMAL"
-                 << endl;
-        }
-
-        cout << "------------------------"
-             << endl;
-    }
-
-    alertManager.showStatistics();
 
     monitor.start();
 

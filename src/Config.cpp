@@ -4,86 +4,59 @@
 #include <iostream>
 #include <sstream>
 
-bool Config::isValidSeverity(
-    const std::string& value
-) const
+Config::Config()
+    : Config("config/rules.conf")
 {
-    return value == "INFO" ||
-           value == "LOW" ||
-           value == "MEDIUM" ||
-           value == "HIGH" ||
-           value == "CRITICAL";
 }
 
-Config::Config()
+Config::Config(const std::string& filePath)
     : valid(false)
 {
-    std::ifstream file("config/rules.conf");
+    std::ifstream file(filePath);
 
     if (!file)
     {
         std::cerr
-            << "ERROR: Could not open config/rules.conf"
+            << "ERROR: Could not open "
+            << filePath
             << std::endl;
 
         return;
     }
 
-    std::string line;
-    int lineNumber = 0;
-    bool hasInvalidRule = false;
+    int eventId;
+    std::string severityText;
+    std::string suspiciousText;
+    std::string message;
 
-    while (std::getline(file, line))
+    while (std::getline(file, message))
     {
-        lineNumber++;
-
-        if (line.empty())
+        if (message.empty())
         {
             continue;
         }
 
-        std::stringstream stream(line);
+        std::stringstream line(message);
 
-        int eventId;
-        std::string severityText;
-        std::string suspiciousText;
-        std::string extra;
+        line >> eventId
+             >> severityText
+             >> suspiciousText;
 
-        if (!(stream >> eventId >>
-              severityText >>
-              suspiciousText) ||
-            (stream >> extra))
+        std::getline(line, message);
+
+        if (!message.empty() &&
+            message.front() == ' ')
         {
-            std::cerr
-                << "ERROR: Invalid configuration at line "
-                << lineNumber
-                << std::endl;
-
-            hasInvalidRule = true;
-            continue;
+            message.erase(0, 1);
         }
 
         if (eventId <= 0)
         {
             std::cerr
-                << "ERROR: Invalid Event ID at line "
-                << lineNumber
-                << std::endl;
-
-            hasInvalidRule = true;
-            continue;
-        }
-
-        if (eventRules.find(eventId) != eventRules.end())
-        {
-            std::cerr
-                << "ERROR: Duplicate Event ID "
+                << "ERROR: Invalid Event ID "
                 << eventId
-                << " at line "
-                << lineNumber
                 << std::endl;
 
-            hasInvalidRule = true;
             continue;
         }
 
@@ -94,7 +67,6 @@ Config::Config()
                 << eventId
                 << std::endl;
 
-            hasInvalidRule = true;
             continue;
         }
 
@@ -106,13 +78,26 @@ Config::Config()
                 << eventId
                 << std::endl;
 
-            hasInvalidRule = true;
+            continue;
+        }
+
+        if (message.empty())
+        {
+            std::cerr
+                << "ERROR: Missing message for Event ID "
+                << eventId
+                << std::endl;
+
             continue;
         }
 
         Severity severity = INFO;
 
-        if (severityText == "LOW")
+        if (severityText == "INFO")
+        {
+            severity = INFO;
+        }
+        else if (severityText == "LOW")
         {
             severity = LOW;
         }
@@ -133,16 +118,20 @@ Config::Config()
             suspiciousText == "SUSPICIOUS";
 
         eventRules[eventId] =
-            {severity, suspicious};
+            {severity, suspicious, message};
     }
 
-    if (eventRules.empty())
-    {
-        valid = false;
-        return;
-    }
+    valid = !eventRules.empty();
+}
 
-    valid = !hasInvalidRule;
+bool Config::isValidSeverity(
+    const std::string& value) const
+{
+    return value == "INFO" ||
+           value == "LOW" ||
+           value == "MEDIUM" ||
+           value == "HIGH" ||
+           value == "CRITICAL";
 }
 
 Rule Config::getRule(int eventId) const
@@ -154,12 +143,28 @@ Rule Config::getRule(int eventId) const
         return it->second;
     }
 
-    return {INFO, false};
+    return {
+        INFO,
+        false,
+        "Unknown Windows Security Event"
+    };
 }
 
 bool Config::hasRule(int eventId) const
 {
     return eventRules.find(eventId) != eventRules.end();
+}
+
+std::vector<int> Config::getEventIds() const
+{
+    std::vector<int> eventIds;
+
+    for (const auto& entry : eventRules)
+    {
+        eventIds.push_back(entry.first);
+    }
+
+    return eventIds;
 }
 
 bool Config::isValid() const

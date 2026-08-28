@@ -1,3 +1,4 @@
+
 #include <windows.h>
 #include <winevt.h>
 
@@ -6,34 +7,67 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <functional>
+#include <sstream>
 
-std::wstring getXmlValue(
+static EventMonitor* activeMonitor = nullptr;
+
+BOOL WINAPI consoleHandler(DWORD signal)
+{
+    if (signal == CTRL_C_EVENT ||
+        signal == CTRL_BREAK_EVENT ||
+        signal == CTRL_CLOSE_EVENT)
+    {
+        if (activeMonitor != nullptr)
+        {
+            activeMonitor->stop();
+        }
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+static std::wstring getXmlValue(
     const std::wstring& xml,
     const std::wstring& name
 )
 {
-    std::wstring tag =
+    std::wstring singleQuoteTag =
         L"<Data Name='" + name + L"'>";
 
-    size_t start =
-        xml.find(tag);
+    size_t start = xml.find(singleQuoteTag);
 
-    if (start == std::wstring::npos)
-        return L"";
+    if (start != std::wstring::npos)
+    {
+        start += singleQuoteTag.length();
 
-    start += tag.length();
+        size_t end = xml.find(L"</Data>", start);
 
-    size_t end =
-        xml.find(L"</Data>", start);
+        if (end != std::wstring::npos)
+        {
+            return xml.substr(start, end - start);
+        }
+    }
 
-    if (end == std::wstring::npos)
-        return L"";
+    std::wstring doubleQuoteTag =
+        L"<Data Name=\"" + name + L"\">";
 
-    return xml.substr(
-        start,
-        end - start
-    );
+    start = xml.find(doubleQuoteTag);
+
+    if (start != std::wstring::npos)
+    {
+        start += doubleQuoteTag.length();
+
+        size_t end = xml.find(L"</Data>", start);
+
+        if (end != std::wstring::npos)
+        {
+            return xml.substr(start, end - start);
+        }
+    }
+
+    return L"";
 }
 
 DWORD WINAPI eventCallback(
@@ -43,7 +77,9 @@ DWORD WINAPI eventCallback(
 )
 {
     if (action != EvtSubscribeActionDeliver)
+    {
         return 0;
+    }
 
     EventMonitor* monitor =
         static_cast<EventMonitor*>(userContext);
@@ -61,7 +97,9 @@ EventMonitor::EventMonitor(
     const Config& config
 )
     : eventHandler(handler),
-      config(config)
+      config(config),
+      subscription(nullptr),
+      running(false)
 {
 }
 
@@ -111,9 +149,7 @@ void EventMonitor::processEvent(EVT_HANDLE event)
         return;
     }
 
-    std::wstring xml(
-        buffer.data()
-    );
+    std::wstring xml(buffer.data());
 
     int id = 0;
 
@@ -144,6 +180,12 @@ void EventMonitor::processEvent(EVT_HANDLE event)
         {
             id = 0;
         }
+    }
+
+    if (!config.hasRule(id))
+    {
+        EvtClose(event);
+        return;
     }
 
     std::wstring username =
@@ -216,34 +258,6 @@ void EventMonitor::processEvent(EVT_HANDLE event)
     std::wstring source =
         L"Windows Security";
 
-    std::wstring message;
-
-    if (id == 4625)
-    {
-        message =
-            L"Failed login attempt";
-    }
-    else if (id == 4624)
-    {
-        message =
-            L"Successful login";
-    }
-    else if (id == 4720)
-    {
-        message =
-            L"New user account created";
-    }
-    else if (id == 4672)
-    {
-        message =
-            L"Special privileges assigned";
-    }
-    else
-    {
-        message =
-            L"Windows Security Event";
-    }
-
     Rule rule =
         config.getRule(id);
 
@@ -265,45 +279,65 @@ void EventMonitor::processEvent(EVT_HANDLE event)
         username.end()
     );
 
-    std::string messageString(
-        message.begin(),
-        message.end()
-    );
-
     Event liveEvent(
         id,
         timestampString,
         sourceString,
         usernameString,
-        messageString,
+        rule.message,
         eventSeverity
     );
 
     std::wcout
-        << L"\n========== WINDOWS EVENT ==========\n";
+        << L"\n========================================"
+        << std::endl;
 
     std::wcout
-        << L"Event ID: "
+        << L"          LOGSENTINEL LIVE EVENT"
+        << std::endl;
+
+    std::wcout
+        << L"========================================"
+        << std::endl;
+
+    std::wcout
+        << L"Event ID   : "
         << id
         << std::endl;
 
     std::wcout
-        << L"Timestamp: "
+        << L"Timestamp  : "
         << timestamp
         << std::endl;
 
     std::wcout
-        << L"Username: "
+        << L"Username   : "
         << username
         << std::endl;
 
     std::wcout
-        << L"IP Address: "
-        << ipAddress
+        << L"IP Address : "
+        << (ipAddress.empty() ? L"-" : ipAddress)
         << std::endl;
 
     std::wcout
-        << L"===================================\n";
+        << L"Severity   : "
+        << severityToString(eventSeverity).c_str()
+        << std::endl;
+
+    std::wcout
+        << L"Status     : "
+        << (rule.suspicious ? L"SUSPICIOUS" : L"NORMAL")
+        << std::endl;
+
+    std::wcout
+        << L"Message    : "
+        << rule.message.c_str()
+        << std::endl;
+
+    std::wcout
+        << L"========================================"
+        << std::endl;
 
     if (eventHandler)
     {
@@ -315,23 +349,78 @@ void EventMonitor::processEvent(EVT_HANDLE event)
 
 void EventMonitor::start()
 {
+    if (running)
+    {
+        std::cout
+            << "Event monitoring is already running."
+            << std::endl;
+
+        return;
+    }
+
+    std::cout
+        << "\n========================================"
+        << std::endl;
+
+    std::cout
+        << "      LOGSENTINEL SECURITY MONITOR"
+        << std::endl;
+
+    std::cout
+        << "========================================"
+        << std::endl;
+
     std::cout
         << "Starting Windows Event Log monitoring..."
         << std::endl;
 
-    EVT_HANDLE subscription =
+    std::vector<int> eventIds =
+        config.getEventIds();
+
+    if (eventIds.empty())
+    {
+        std::cout
+            << "No event IDs configured."
+            << std::endl;
+
+        return;
+    }
+
+    std::wstringstream queryStream;
+
+    queryStream
+        << L"*[System[(";
+
+    for (size_t i = 0; i < eventIds.size(); ++i)
+    {
+        if (i > 0)
+        {
+            queryStream
+                << L" or ";
+        }
+
+        queryStream
+            << L"EventID="
+            << eventIds[i];
+    }
+
+    queryStream
+        << L")]]";
+
+    std::wstring query =
+        queryStream.str();
+
+    std::wcout
+        << L"Subscription query: "
+        << query
+        << std::endl;
+
+    subscription =
         EvtSubscribe(
             nullptr,
             nullptr,
             L"Security",
-
-            L"*[System["
-            L"(EventID=4625 or "
-            L"EventID=4624 or "
-            L"EventID=4720 or "
-            L"EventID=4672)"
-            L"]]",
-
+            query.c_str(),
             nullptr,
             this,
             eventCallback,
@@ -355,6 +444,14 @@ void EventMonitor::start()
         return;
     }
 
+    running = true;
+    activeMonitor = this;
+
+    SetConsoleCtrlHandler(
+        consoleHandler,
+        TRUE
+    );
+
     std::cout
         << "Monitoring Windows Security Event Log..."
         << std::endl;
@@ -363,10 +460,48 @@ void EventMonitor::start()
         << "Waiting for security events..."
         << std::endl;
 
-    while (true)
+    std::cout
+        << "Press Ctrl+C to stop monitoring."
+        << std::endl;
+
+    while (running)
     {
         Sleep(1000);
     }
 
-    EvtClose(subscription);
+    SetConsoleCtrlHandler(
+        consoleHandler,
+        FALSE
+    );
+
+    activeMonitor = nullptr;
+
+    if (subscription != nullptr)
+    {
+        EvtClose(subscription);
+        subscription = nullptr;
+    }
+
+    std::cout
+        << "Windows Event Log monitoring stopped."
+        << std::endl;
+}
+
+void EventMonitor::stop()
+{
+    if (!running)
+    {
+        return;
+    }
+
+    std::cout
+        << "\nStopping LogSentinel..."
+        << std::endl;
+
+    running = false;
+}
+
+bool EventMonitor::isRunning() const
+{
+    return running;
 }

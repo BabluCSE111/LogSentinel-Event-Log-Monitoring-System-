@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #include "Event.h"
 
@@ -10,6 +11,7 @@ struct Rule
 {
     Severity severity;
     bool suspicious;
+    std::string message;
 };
 
 class Config
@@ -23,9 +25,13 @@ private:
 public:
     Config();
 
+    explicit Config(const std::string& filePath);
+
     Rule getRule(int eventId) const;
 
     bool hasRule(int eventId) const;
+
+    std::vector<int> getEventIds() const;
 
     bool isValid() const;
 };

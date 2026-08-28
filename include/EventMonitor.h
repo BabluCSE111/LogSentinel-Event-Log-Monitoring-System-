@@ -14,6 +14,9 @@ private:
     std::function<void(Event)> eventHandler;
     const Config& config;
 
+    EVT_HANDLE subscription;
+    bool running;
+
     void processEvent(EVT_HANDLE event);
 
     friend DWORD WINAPI eventCallback(
@@ -29,6 +32,10 @@ public:
     );
 
     void start();
+
+    void stop();
+
+    bool isRunning() const;
 };
 
 #endif

@@ -13,7 +13,10 @@ enum Severity {
 
 std::string severityToString(Severity severity);
 
-class Event {
+Severity severityFromString(const std::string& text);
+
+class Event
+{
 private:
     int eventId;
     std::string timestamp;
