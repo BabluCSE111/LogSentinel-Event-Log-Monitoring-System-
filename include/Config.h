@@ -18,6 +18,8 @@ private:
     std::map<int, Rule> eventRules;
     bool valid;
 
+    bool isValidSeverity(const std::string& value) const;
+
 public:
     Config();
 

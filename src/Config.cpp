@@ -2,6 +2,18 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
+
+bool Config::isValidSeverity(
+    const std::string& value
+) const
+{
+    return value == "INFO" ||
+           value == "LOW" ||
+           value == "MEDIUM" ||
+           value == "HIGH" ||
+           value == "CRITICAL";
+}
 
 Config::Config()
     : valid(false)
@@ -17,19 +29,90 @@ Config::Config()
         return;
     }
 
-    int eventId;
-    std::string severityText;
-    std::string suspiciousText;
+    std::string line;
+    int lineNumber = 0;
+    bool hasInvalidRule = false;
 
-    while (file >> eventId >> severityText >> suspiciousText)
+    while (std::getline(file, line))
     {
-        Severity severity;
+        lineNumber++;
 
-        if (severityText == "INFO")
+        if (line.empty())
         {
-            severity = INFO;
+            continue;
         }
-        else if (severityText == "LOW")
+
+        std::stringstream stream(line);
+
+        int eventId;
+        std::string severityText;
+        std::string suspiciousText;
+        std::string extra;
+
+        if (!(stream >> eventId >>
+              severityText >>
+              suspiciousText) ||
+            (stream >> extra))
+        {
+            std::cerr
+                << "ERROR: Invalid configuration at line "
+                << lineNumber
+                << std::endl;
+
+            hasInvalidRule = true;
+            continue;
+        }
+
+        if (eventId <= 0)
+        {
+            std::cerr
+                << "ERROR: Invalid Event ID at line "
+                << lineNumber
+                << std::endl;
+
+            hasInvalidRule = true;
+            continue;
+        }
+
+        if (eventRules.find(eventId) != eventRules.end())
+        {
+            std::cerr
+                << "ERROR: Duplicate Event ID "
+                << eventId
+                << " at line "
+                << lineNumber
+                << std::endl;
+
+            hasInvalidRule = true;
+            continue;
+        }
+
+        if (!isValidSeverity(severityText))
+        {
+            std::cerr
+                << "ERROR: Invalid severity for Event ID "
+                << eventId
+                << std::endl;
+
+            hasInvalidRule = true;
+            continue;
+        }
+
+        if (suspiciousText != "SUSPICIOUS" &&
+            suspiciousText != "NORMAL")
+        {
+            std::cerr
+                << "ERROR: Invalid rule type for Event ID "
+                << eventId
+                << std::endl;
+
+            hasInvalidRule = true;
+            continue;
+        }
+
+        Severity severity = INFO;
+
+        if (severityText == "LOW")
         {
             severity = LOW;
         }
@@ -45,26 +128,6 @@ Config::Config()
         {
             severity = CRITICAL;
         }
-        else
-        {
-            std::cerr
-                << "ERROR: Invalid severity for Event ID "
-                << eventId
-                << std::endl;
-
-            continue;
-        }
-
-        if (suspiciousText != "SUSPICIOUS" &&
-            suspiciousText != "NORMAL")
-        {
-            std::cerr
-                << "ERROR: Invalid rule type for Event ID "
-                << eventId
-                << std::endl;
-
-            continue;
-        }
 
         bool suspicious =
             suspiciousText == "SUSPICIOUS";
@@ -73,7 +136,13 @@ Config::Config()
             {severity, suspicious};
     }
 
-    valid = !eventRules.empty();
+    if (eventRules.empty())
+    {
+        valid = false;
+        return;
+    }
+
+    valid = !hasInvalidRule;
 }
 
 Rule Config::getRule(int eventId) const
