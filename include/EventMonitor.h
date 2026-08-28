@@ -3,14 +3,16 @@
 
 #include <windows.h>
 #include <winevt.h>
-
 #include <functional>
 
 #include "Event.h"
+#include "Config.h"
 
-class EventMonitor {
+class EventMonitor
+{
 private:
     std::function<void(Event)> eventHandler;
+    const Config& config;
 
     void processEvent(EVT_HANDLE event);
 
@@ -21,7 +23,10 @@ private:
     );
 
 public:
-    EventMonitor(std::function<void(Event)> handler);
+    EventMonitor(
+        std::function<void(Event)> handler,
+        const Config& config
+    );
 
     void start();
 };

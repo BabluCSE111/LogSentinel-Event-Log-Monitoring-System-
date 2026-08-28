@@ -57,9 +57,11 @@ DWORD WINAPI eventCallback(
 }
 
 EventMonitor::EventMonitor(
-    std::function<void(Event)> handler
+    std::function<void(Event)> handler,
+    const Config& config
 )
-    : eventHandler(handler)
+    : eventHandler(handler),
+      config(config)
 {
 }
 
@@ -242,20 +244,11 @@ void EventMonitor::processEvent(EVT_HANDLE event)
             L"Windows Security Event";
     }
 
-    Severity eventSeverity = INFO;
+    Rule rule =
+        config.getRule(id);
 
-    if (id == 4625)
-    {
-        eventSeverity = HIGH;
-    }
-    else if (id == 4720)
-    {
-        eventSeverity = MEDIUM;
-    }
-    else if (id == 4672)
-    {
-        eventSeverity = INFO;
-    }
+    Severity eventSeverity =
+        rule.severity;
 
     std::string timestampString(
         timestamp.begin(),
