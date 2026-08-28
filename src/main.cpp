@@ -22,6 +22,10 @@ int main()
         return 1;
     }
 
+    AlertManager alertManager;
+
+    alertManager.loadAlerts();
+
     LogReader reader;
 
     vector<Event> events =
@@ -30,8 +34,6 @@ int main()
     RuleEngine engine(config);
 
     Alert alert;
-
-    AlertManager alertManager;
 
     EventMonitor monitor(
         [&](Event event)
