@@ -2,6 +2,8 @@
 #define CONFIG_H
 
 #include <map>
+#include <string>
+
 #include "Event.h"
 
 struct Rule
@@ -14,6 +16,7 @@ class Config
 {
 private:
     std::map<int, Rule> eventRules;
+    bool valid;
 
 public:
     Config();
@@ -21,6 +24,8 @@ public:
     Rule getRule(int eventId) const;
 
     bool hasRule(int eventId) const;
+
+    bool isValid() const;
 };
 
 #endif

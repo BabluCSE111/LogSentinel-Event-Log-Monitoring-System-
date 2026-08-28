@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+
 #include "LogReader.h"
 #include "RuleEngine.h"
 #include "Alert.h"
@@ -11,13 +12,22 @@ using namespace std;
 
 int main()
 {
-    LogReader reader;
-
-    vector<Event> events = reader.readFile("logs/test.log");
-
     Config config;
 
-    RuleEngine engine;
+    if (!config.isValid())
+    {
+        cout << "ERROR: Configuration is invalid."
+             << endl;
+
+        return 1;
+    }
+
+    LogReader reader;
+
+    vector<Event> events =
+        reader.readFile("logs/test.log");
+
+    RuleEngine engine(config);
 
     Alert alert;
 
@@ -36,6 +46,7 @@ int main()
                      << endl;
 
                 alert.showAlert(event);
+
                 alertManager.addAlert(event);
             }
             else
@@ -47,7 +58,7 @@ int main()
         config
     );
 
-    for (Event event : events)
+    for (const Event& event : events)
     {
         cout << "Event ID: "
              << event.getEventId()

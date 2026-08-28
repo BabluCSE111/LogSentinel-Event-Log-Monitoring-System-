@@ -7,10 +7,15 @@
 class RuleEngine
 {
 private:
-    Config config;
+    const Config& config;
 
 public:
-    bool isSuspicious(const Event& event)
+    RuleEngine(const Config& config)
+        : config(config)
+    {
+    }
+
+    bool isSuspicious(const Event& event) const
     {
         Rule rule =
             config.getRule(event.getEventId());
